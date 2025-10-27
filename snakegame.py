@@ -22,9 +22,8 @@ class SnakeGame:
         self.obstacles = []
         self.last_obstacle_time = time.time()
 
-        # NEW FLAG: control whether live score is shown during play
-        # keep it False so no Score/High Score appears while playing
-        self.show_live_score = False
+        # ✅ Always show live score
+        self.show_live_score = True
 
         # --- Setup screen ---
         self.wn = turtle.Screen()
@@ -40,6 +39,9 @@ class SnakeGame:
 
         # --- Bind Keys ---
         self.bind_keys()
+
+        # ✅ Ensure score shows on start
+        self.update_score()
 
     # --- UI Elements ---
     def create_snake(self):
@@ -67,26 +69,17 @@ class SnakeGame:
         self.pen.color("white")
         self.pen.penup()
         self.pen.hideturtle()
-        # keep the pen ready at top but don't write unless allowed
+        # keep the pen ready at top
         self.pen.goto(0, 260)
-        # only write the live score if flag enabled
+        # always write the live score
         self.update_score()
 
     def update_score(self):
-        """
-        Writes the live score at the top only if show_live_score is True.
-        Otherwise this function is effectively a no-op (clears any previous top text).
-        """
-        # ensure old top text is cleared when switching modes/restarting
+        """Always writes the live score at the top."""
         self.pen.clear()
-        if self.show_live_score:
-            # draw live score at the top
-            self.pen.goto(0, 260)
-            self.pen.write(f"Score: {self.score}  High Score: {self.high_score}",
-                           align="center", font=("Courier", 18, "bold"))
-        else:
-            # don't show live score while playing; keep pen cleared
-            pass
+        self.pen.goto(0, 260)
+        self.pen.write(f"Score: {self.score}  High Score: {self.high_score}",
+                       align="center", font=("Courier", 18, "bold"))
 
     # --- Key Bindings ---
     def bind_keys(self):
@@ -144,7 +137,6 @@ class SnakeGame:
             self.score += 10
             if self.score > self.high_score:
                 self.high_score = self.score
-            # update_score respects show_live_score flag and will be silent now
             self.update_score()
 
     def check_wall_collision(self):
@@ -167,7 +159,7 @@ class SnakeGame:
     def check_self_collision(self):
         head = self.snake[0]
         for segment in self.snake[1:]:
-            if head.distance(segment) < 18:  # adjusted for circle size
+            if head.distance(segment) < 18:
                 return True
         return False
 
@@ -192,9 +184,6 @@ class SnakeGame:
     def game_over(self):
         # Clear any top text so center display is clean
         self.pen.clear()
-
-        # Centered final summary: Final Score + High Score
-        # Use the same pen but move to center for final display
         self.pen.goto(0, 0)
         self.pen.write(f"Game Over!\nFinal Score: {self.score}\nHigh Score: {self.high_score}",
                        align="center", font=("Courier", 22, "bold"))
@@ -202,12 +191,9 @@ class SnakeGame:
         time.sleep(1.5)
 
         choice = self.wn.textinput("Game Over", "Play again? (y/n): ")
-        # clear the final display before acting on choice
         self.pen.clear()
 
         if choice and choice.lower().startswith("y"):
-            # Before restarting, ensure live score is still hidden
-            self.show_live_score = False
             self.reset_game()
         else:
             self.wn.bye()
@@ -221,18 +207,16 @@ class SnakeGame:
         self.snake.clear()
         self.obstacles.clear()
         self.score = 0
-        # keep live score hidden for next play
         self.update_score()
 
         self.create_snake()
         self.food.goto(0, 100)
-        self.choose_settings()  # re-prompt for settings
-        self.bind_keys()        # re-bind after prompts
-        self.run_game()         # restart loop
+        self.choose_settings()
+        self.bind_keys()
+        self.run_game()
 
     # --- Menu ---
     def choose_settings(self):
-        # Level choice
         level_choice = self.wn.textinput("Choose Level", "Enter Easy / Medium / Hard:")
         if not level_choice:
             level_choice = "easy"
@@ -245,7 +229,6 @@ class SnakeGame:
             self.level = "Easy"
         self.delay = LEVEL_SPEED[self.level]
 
-        # Mode choice
         mode_choice = self.wn.textinput("Game Mode", "Choose Mode: Classic (with walls) / Infinite (no walls):")
         if not mode_choice:
             mode_choice = "classic"
@@ -259,11 +242,9 @@ class SnakeGame:
             self.walls = True
             self.survival_mode = False
 
-        # ensure the game starts idle and score is hidden while playing
         self.direction = "stop"
         self.running = False
-        self.show_live_score = False
-        self.bind_keys()  # re-enable controls after popup closes
+        self.bind_keys()
 
     # --- Game Loop ---
     def update_snake_body(self):
@@ -280,13 +261,11 @@ class SnakeGame:
             self.move()
 
             if self.check_wall_collision() or self.check_self_collision() or self.check_obstacle_collision():
-                # When game ends, show final summary in center (handled in game_over)
                 self.game_over()
                 return
 
             self.check_food_collision()
 
-            # Add obstacles in survival mode
             if self.survival_mode and (time.time() - self.last_obstacle_time > OBSTACLE_INTERVAL):
                 self.add_obstacle()
                 self.last_obstacle_time = time.time()
