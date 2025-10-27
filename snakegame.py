@@ -22,6 +22,10 @@ class SnakeGame:
         self.obstacles = []
         self.last_obstacle_time = time.time()
 
+        # NEW FLAG: control whether live score is shown during play
+        # keep it False so no Score/High Score appears while playing
+        self.show_live_score = False
+
         # --- Setup screen ---
         self.wn = turtle.Screen()
         self.wn.title("🐍 Snake Game v4.2 - Smooth Snake")
@@ -41,11 +45,11 @@ class SnakeGame:
     def create_snake(self):
         self.snake = []
         for i in range(3):
-            seg = turtle.Turtle(shape="circle")  # changed from "square" → "circle"
+            seg = turtle.Turtle(shape="circle")  # smoother shape
             seg.color("lime")
             seg.penup()
-            seg.shapesize(stretch_wid=0.9, stretch_len=0.9)  # makes snake tighter & smoother
-            seg.goto(-18 * i, 0)  # reduced gap between segments
+            seg.shapesize(stretch_wid=0.9, stretch_len=0.9)
+            seg.goto(-18 * i, 0)
             self.snake.append(seg)
         # make head distinct
         self.snake[0].color("limegreen")
@@ -63,13 +67,26 @@ class SnakeGame:
         self.pen.color("white")
         self.pen.penup()
         self.pen.hideturtle()
+        # keep the pen ready at top but don't write unless allowed
         self.pen.goto(0, 260)
+        # only write the live score if flag enabled
         self.update_score()
 
     def update_score(self):
+        """
+        Writes the live score at the top only if show_live_score is True.
+        Otherwise this function is effectively a no-op (clears any previous top text).
+        """
+        # ensure old top text is cleared when switching modes/restarting
         self.pen.clear()
-        self.pen.write(f"Score: {self.score}  High Score: {self.high_score}",
-                       align="center", font=("Courier", 18, "bold"))
+        if self.show_live_score:
+            # draw live score at the top
+            self.pen.goto(0, 260)
+            self.pen.write(f"Score: {self.score}  High Score: {self.high_score}",
+                           align="center", font=("Courier", 18, "bold"))
+        else:
+            # don't show live score while playing; keep pen cleared
+            pass
 
     # --- Key Bindings ---
     def bind_keys(self):
@@ -127,6 +144,7 @@ class SnakeGame:
             self.score += 10
             if self.score > self.high_score:
                 self.high_score = self.score
+            # update_score respects show_live_score flag and will be silent now
             self.update_score()
 
     def check_wall_collision(self):
@@ -172,13 +190,24 @@ class SnakeGame:
 
     # --- Game Over & Restart ---
     def game_over(self):
+        # Clear any top text so center display is clean
+        self.pen.clear()
+
+        # Centered final summary: Final Score + High Score
+        # Use the same pen but move to center for final display
         self.pen.goto(0, 0)
-        self.pen.write(f"Game Over!\nFinal Score: {self.score}",
-                       align="center", font=("Courier", 24, "bold"))
+        self.pen.write(f"Game Over!\nFinal Score: {self.score}\nHigh Score: {self.high_score}",
+                       align="center", font=("Courier", 22, "bold"))
         self.wn.update()
         time.sleep(1.5)
+
         choice = self.wn.textinput("Game Over", "Play again? (y/n): ")
+        # clear the final display before acting on choice
+        self.pen.clear()
+
         if choice and choice.lower().startswith("y"):
+            # Before restarting, ensure live score is still hidden
+            self.show_live_score = False
             self.reset_game()
         else:
             self.wn.bye()
@@ -192,6 +221,7 @@ class SnakeGame:
         self.snake.clear()
         self.obstacles.clear()
         self.score = 0
+        # keep live score hidden for next play
         self.update_score()
 
         self.create_snake()
@@ -229,8 +259,10 @@ class SnakeGame:
             self.walls = True
             self.survival_mode = False
 
+        # ensure the game starts idle and score is hidden while playing
         self.direction = "stop"
         self.running = False
+        self.show_live_score = False
         self.bind_keys()  # re-enable controls after popup closes
 
     # --- Game Loop ---
@@ -248,6 +280,7 @@ class SnakeGame:
             self.move()
 
             if self.check_wall_collision() or self.check_self_collision() or self.check_obstacle_collision():
+                # When game ends, show final summary in center (handled in game_over)
                 self.game_over()
                 return
 
